@@ -1,25 +1,44 @@
 #ifndef _SYRAH_CYCLE_TIMER_H_
 #define _SYRAH_CYCLE_TIMER_H_
 
+// #if defined(__APPLE__)
+//   #if defined(__x86_64__)
+//     #include <sys/sysctl.h>
+//   #else
+//     #include <mach/mach.h>
+//     #include <mach/mach_time.h>
+//   #endif // __x86_64__ or not
+
+//   #include <stdio.h>  // fprintf
+//   #include <stdlib.h> // exit
+
+// #elif _WIN32
+// #  include <windows.h>
+// #  include <time.h>
+// #else
+// #  include <stdio.h>
+// #  include <stdlib.h>
+// #  include <string.h>
+// #  include <sys/time.h>
+// #endif
+
+#include <stdio.h>  // fprintf
+#include <stdlib.h> // exit
+#include <string.h>
+#include <sys/time.h>
+
 #if defined(__APPLE__)
   #if defined(__x86_64__)
     #include <sys/sysctl.h>
   #else
     #include <mach/mach.h>
     #include <mach/mach_time.h>
-  #endif // __x86_64__ or not
-
-  #include <stdio.h>  // fprintf
-  #include <stdlib.h> // exit
-
+  #endif
 #elif _WIN32
-#  include <windows.h>
-#  include <time.h>
+  #include <windows.h>
+  #include <time.h>
 #else
-#  include <stdio.h>
-#  include <stdlib.h>
-#  include <string.h>
-#  include <sys/time.h>
+  #include <time.h>  // 这里添加 原来的代码不支持unix like操作系统
 #endif
 
 
