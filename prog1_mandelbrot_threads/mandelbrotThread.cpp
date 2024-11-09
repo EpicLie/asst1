@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <thread>
-
+#include <mutex>
+#include <iostream>
 #include "CycleTimer.h"
 
 typedef struct {
@@ -12,6 +13,7 @@ typedef struct {
     int* output;
     int threadId;
     int numThreads;
+
 } WorkerArgs;
 
 
@@ -22,6 +24,8 @@ extern void mandelbrotSerial(
     int maxIterations,
     int output[]);
 
+std::mutex mutex_lock;
+bool half = 0;
 
 //
 // workerThreadStart --
@@ -34,8 +38,30 @@ void workerThreadStart(WorkerArgs * const args) {
     // to compute a part of the output image.  For example, in a
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
-
-    printf("Hello world from thread %d\n", args->threadId);
+    int startRow = 0;
+    unsigned int numRows = 0;
+    if (!half)
+    {
+        mutex_lock.lock();
+        printf("Hello world from thread %d\n", args->threadId);
+        half = 1;
+        startRow = 0;
+        numRows = args->height / 2;
+        std::cout << "startRow = " << startRow << std::endl;
+        mutex_lock.unlock();
+    }
+    else {
+        mutex_lock.lock();
+        printf("Hello world from thread %d\n", args->threadId);
+        startRow = args->height / 2;
+        numRows = args->height / 2;
+        std::cout << "startRow = " << startRow << std::endl;
+        mutex_lock.unlock();
+    }
+    mandelbrotSerial(args->x0, args->y0, args->x1, args->y1,
+        args->width, args->height, startRow, numRows, args->maxIterations,
+        args->output
+    );
 }
 
 //
@@ -72,10 +98,11 @@ void mandelbrotThread(
         args[i].y1 = y1;
         args[i].width = width;
         args[i].height = height;
+        //maxIterations is the algorithm's threshold
         args[i].maxIterations = maxIterations;
         args[i].numThreads = numThreads;
         args[i].output = output;
-      
+        //maybe we should add a mutual lock variable
         args[i].threadId = i;
     }
 
@@ -85,7 +112,7 @@ void mandelbrotThread(
     for (int i=1; i<numThreads; i++) {
         workers[i] = std::thread(workerThreadStart, &args[i]);
     }
-    
+    //mainthread
     workerThreadStart(&args[0]);
 
     // join worker threads
