@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <iostream>
 #include "CycleTimer.h"
 
@@ -25,7 +26,7 @@ extern void mandelbrotSerial(
     int output[]);
 
 std::mutex mutex_lock;
-bool half = 0;
+int half;
 
 //
 // workerThreadStart --
@@ -38,25 +39,43 @@ void workerThreadStart(WorkerArgs * const args) {
     // to compute a part of the output image.  For example, in a
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
+
+    // My failure is because I dont know that the programs between the locks are not atomic.
     int startRow = 0;
     unsigned int numRows = 0;
-    if (!half)
+    // if (!half)
+    // {
+    //     mutex_lock.lock();
+    //     printf("Hello world from thread %d\n", args->threadId);
+    //     half = 1;
+    //     startRow = 0;
+    //     numRows = args->height / 2;
+    //     std::cout << "startRow = " << startRow << std::endl;
+    //     mutex_lock.unlock();
+    // }
+    // else {
+    //     mutex_lock.lock();
+    //     printf("Hello world from thread %d\n", args->threadId);
+    //     startRow = args->height / 2;
+    //     numRows = args->height / 2;
+    //     std::cout << "startRow = " << startRow << std::endl;
+    //     mutex_lock.unlock();
+    // }
     {
-        mutex_lock.lock();
+        std::unique_lock<std::mutex> lock(mutex_lock);
         printf("Hello world from thread %d\n", args->threadId);
-        half = 1;
-        startRow = 0;
-        numRows = args->height / 2;
+        if (!half) {
+            startRow = 0;
+            numRows = args->height / 2;
+            half++;
+        }
+        else {
+            half--;
+            startRow = args->height / 2;
+            numRows = args->height / 2;
+        }
+        std::cout << "half = " << half << std::endl;
         std::cout << "startRow = " << startRow << std::endl;
-        mutex_lock.unlock();
-    }
-    else {
-        mutex_lock.lock();
-        printf("Hello world from thread %d\n", args->threadId);
-        startRow = args->height / 2;
-        numRows = args->height / 2;
-        std::cout << "startRow = " << startRow << std::endl;
-        mutex_lock.unlock();
     }
     mandelbrotSerial(args->x0, args->y0, args->x1, args->y1,
         args->width, args->height, startRow, numRows, args->maxIterations,
