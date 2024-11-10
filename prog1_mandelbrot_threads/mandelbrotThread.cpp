@@ -14,6 +14,8 @@ typedef struct {
     int* output;
     int threadId;
     int numThreads;
+    int startRow;
+    int numRows;
 
 } WorkerArgs;
 
@@ -27,7 +29,6 @@ extern void mandelbrotSerial(
 
 std::mutex mutex_lock;
 int half;
-
 //
 // workerThreadStart --
 //
@@ -41,8 +42,8 @@ void workerThreadStart(WorkerArgs * const args) {
     // half of the image and thread 1 could compute the bottom half.
 
     // My failure is because I dont know that the programs between the locks are not atomic.
-    int startRow = 0;
-    unsigned int numRows = 0;
+    // int startRow = 0;
+    // unsigned int numRows = 0;
     // if (!half)
     // {
     //     mutex_lock.lock();
@@ -61,7 +62,8 @@ void workerThreadStart(WorkerArgs * const args) {
     //     std::cout << "startRow = " << startRow << std::endl;
     //     mutex_lock.unlock();
     // }
-    {
+    // A specific method for two threads with communication/synchronization among threads.
+    /*{
         std::unique_lock<std::mutex> lock(mutex_lock);
         printf("Hello world from thread %d\n", args->threadId);
         if (!half) {
@@ -80,7 +82,13 @@ void workerThreadStart(WorkerArgs * const args) {
     mandelbrotSerial(args->x0, args->y0, args->x1, args->y1,
         args->width, args->height, startRow, numRows, args->maxIterations,
         args->output
+    );*/
+    mandelbrotSerial(args->x0, args->y0, args->x1, args->y1,
+        args->width, args->height, args->startRow, args->numRows, args->maxIterations,
+        args->output
     );
+
+
 }
 
 //
@@ -105,6 +113,11 @@ void mandelbrotThread(
     // Creates thread objects that do not yet represent a thread.
     std::thread workers[MAX_THREADS];
     WorkerArgs args[MAX_THREADS];
+    bool lastRow = 0;
+    int drows = height / numThreads;
+    if (height % numThreads != 0)
+        lastRow = 1;
+    // int dy = (y1 - y0) / numThreads;
 
     for (int i=0; i<numThreads; i++) {
       
@@ -123,6 +136,12 @@ void mandelbrotThread(
         args[i].output = output;
         //maybe we should add a mutual lock variable
         args[i].threadId = i;
+        args[i].startRow = drows * i;
+        if (i == numThreads - 1 && lastRow)
+            args[i].numRows = height % numThreads;
+        else
+            args[i].numRows = drows;
+
     }
 
     // Spawn the worker threads.  Note that only numThreads-1 std::threads

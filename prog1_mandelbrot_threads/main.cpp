@@ -144,6 +144,8 @@ int main(int argc, char** argv) {
     //
 
     double minThread = 1e30;
+    // The reason why num of times is 5 is that we should calculate the minimum time of the algorithm. 
+    // And it's the bug that make my answer wrong... 
     for (int i = 0; i < 5; ++i) {
         memset(output_thread, 0, width * height * sizeof(int));
         double startTime = CycleTimer::currentSeconds();
