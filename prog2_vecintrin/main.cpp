@@ -186,9 +186,11 @@ void absVector(float* values, float* output, int N) {
 //  Note: Take a careful look at this loop indexing.  This example
 //  code is not guaranteed to work when (N % VECTOR_WIDTH) != 0.
 //  Why is that the case?
-  for (int i=0; i<N; i+=VECTOR_WIDTH) {
+//  如果不能整除，那这个代码还是按原来的逻辑进行，那么就会在load的过程中出错，因为不够。
+  for (int i = 0; i < N; i += VECTOR_WIDTH) {
 
     // All ones
+    // 默认的向量维度为4.
     maskAll = _cs149_init_ones();
 
     // All zeros
@@ -197,19 +199,19 @@ void absVector(float* values, float* output, int N) {
     // Load vector of values from contiguous memory addresses
     _cs149_vload_float(x, values+i, maskAll);               // x = values[i];
 
-    // Set mask according to predicate
+    // Set mask according to predicate 根据谓词设置遮罩 即如果x<0，maskIsNegative为1，否则为0
     _cs149_vlt_float(maskIsNegative, x, zero, maskAll);     // if (x < 0) {
 
-    // Execute instruction using mask ("if" clause)
+    // Execute instruction using mask ("if" clause) 即如果maskIsNegative为1，则输出-x
     _cs149_vsub_float(result, zero, x, maskIsNegative);      //   output[i] = -x;
 
-    // Inverse maskIsNegative to generate "else" mask
+    // Inverse maskIsNegative to generate "else" mask 反转maskIsNegative以处理else逻辑
     maskIsNotNegative = _cs149_mask_not(maskIsNegative);     // } else {
 
-    // Execute instruction ("else" clause)
+    // Execute instruction ("else" clause) clause的意思是子句。 直接原样将数组加载到向量化的result中
     _cs149_vload_float(result, values+i, maskIsNotNegative); //   output[i] = x; }
 
-    // Write results back to memory
+    // Write results back to memory  写回数组中。 向量化的result ---> output数组
     _cs149_vstore_float(output+i, result, maskAll);
   }
 }
@@ -249,7 +251,54 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
   // Your solution should work for any value of
   // N and VECTOR_WIDTH, not just when VECTOR_WIDTH divides N
   //
-  
+  // 注意vset和vmove的区别是，vset的参数是一个数，即把这个数赋给向量的所有元素。而vmove则是把向量中的元素赋给目标向量。
+  __cs149_vec_float x, maskIsOnes;
+  __cs149_vec_float result;
+  __cs149_vec_int y, maskIsZero, allOnes;
+  __cs149_mask maskAll, maskForExp;
+  maskAll = _cs149_init_ones();
+  maskIsZero = _cs149_vset_int(0);
+  maskIsOnes = _cs149_vset_float(1);
+  allOnes = _cs149_vset_int(1);
+  for (int i = 0; i < N; i += VECTOR_WIDTH) {
+    // 考虑到不能整除向量宽度的情况，需要进行判断，并利用_cs149_init_ones来修改遮罩
+    // 这样可以避免超出临界区。
+    if (i + VECTOR_WIDTH >= N)
+      maskAll = _cs149_init_ones(N - i);
+    // 加载底数和指数
+    _cs149_vload_float(x, values + i, maskAll);
+    _cs149_vload_int(y, exponents + i, maskAll);
+    _cs149_vmove_float(result, x, maskAll);
+    // 先处理指数为0的情况
+    // 如果y == 0，那么maskForExp为1. 为1可以被修改。为0则不能。
+    _cs149_veq_int(maskForExp, y, maskIsZero, maskAll);
+    // 如果maskForExp为1，那么x = 1.
+    _cs149_vmove_float(result, maskIsOnes, maskForExp);
+    _cs149_vmove_float(x, maskIsOnes, maskForExp);
+    // 处理else clause
+    // 先确定处理范围：在maxwidth以内并且指数y不为0
+    maskForExp = _cs149_mask_not(maskForExp);
+    maskAll = _cs149_mask_and(maskForExp, maskAll);
+    // 先算1次方
+    // _cs149_vmove_float(result, x, maskAll);
+    _cs149_vsub_int(y, y, allOnes, maskAll);
+    // 得到指数已经为0的mask
+    _cs149_veq_int(maskForExp, y, maskIsZero, maskAll);
+    maskForExp = _cs149_mask_not(maskForExp);
+    maskAll = _cs149_mask_and(maskForExp, maskAll);
+    while (_cs149_cntbits(maskAll))
+    {
+      _cs149_vmult_float(result, result, x, maskAll);
+      _cs149_vsub_int(y, y, allOnes, maskAll);
+      _cs149_veq_int(maskForExp, y, maskIsZero, maskAll);
+      maskForExp = _cs149_mask_not(maskForExp);
+      maskAll = _cs149_mask_and(maskForExp, maskAll);
+    }
+
+  }
+  maskAll = _cs149_init_ones();
+  _cs149_vstore_float(output, result, maskAll);
+  return;
 }
 
 // returns the sum of all elements in values

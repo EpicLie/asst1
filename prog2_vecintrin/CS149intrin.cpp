@@ -5,6 +5,7 @@
 //* Implementation *
 //******************
 
+// 把first之前的置为true， 其余的置为false
 __cs149_mask _cs149_init_ones(int first) {
   __cs149_mask mask;
   for (int i=0; i<VECTOR_WIDTH; i++) {
