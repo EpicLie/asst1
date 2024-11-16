@@ -239,7 +239,7 @@ void _cs149_hadd(__cs149_vec<T> &vecResult, __cs149_vec<T> &vec) {
     vecResult.value[2 * i + 1] = result;
   }
 }
-
+// 显式实例化。并非必要，但能使编译器减少重复实例化，从而缩小目标文件大小。
 template void _cs149_hadd<float>(__cs149_vec_float &vecResult, __cs149_vec_float &vec);
 
 void _cs149_hadd_float(__cs149_vec_float &vecResult, __cs149_vec_float &vec) { _cs149_hadd<float>(vecResult, vec); }

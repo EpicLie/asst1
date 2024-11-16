@@ -4,6 +4,7 @@
 #include <math.h>
 #include "CS149intrin.h"
 #include "logger.h"
+#include <iostream>
 using namespace std;
 
 #define EXP_MAX 10
@@ -292,6 +293,7 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
     {
       _cs149_vmult_float(result, result, x, maskAll);
       // 检查是否越界
+      // 无初始化默认都是1，vgt也只能继承原来的值。因此必须先和maskAll与一下确保已经固定了的值不被clamped覆盖掉。
       tempMask = _cs149_mask_and(tempMask, maskAll);
       _cs149_vgt_float(tempMask, result, clamped, maskAll);
       _cs149_vmove_float(result, clamped, tempMask);
@@ -329,11 +331,46 @@ float arraySumVector(float* values, int N) {
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of arraySumSerial here
   //
-  
-  for (int i=0; i<N; i+=VECTOR_WIDTH) {
+  __cs149_mask maskAll, tempMask;
+  __cs149_vec_float allZeros;
+  allZeros = _cs149_vset_float(0);
+  maskAll = _cs149_init_ones();
+  __cs149_vec_float sum, temp, sub;
+  // float* tempValues;
+  _cs149_vload_float(sum, values, maskAll);
+  float result = 0.f;
 
+  for (int i = 0; i < N; i += VECTOR_WIDTH) {
+    // tempValues = values + i;
+    _cs149_vload_float(sum, values + i, maskAll);
+    while (true)
+    {
+      // cout << sum.value[0] << endl;
+      // cout << sum.value[1] << endl;
+      // cout << sum.value[2] << endl;
+      // cout << sum.value[3] << endl;
+      _cs149_hadd_float(sum, sum);
+      // _cs149_vstore_float(tempPtr, sum, maskAll);
+      _cs149_vset_float(temp, sum.value[0], maskAll);
+      // cout << sum.value[0] << endl;
+      // cout << sum.value[1] << endl;
+      // cout << sum.value[2] << endl;
+      // cout << sum.value[3] << endl;
+      _cs149_vsub_float(sub, sum, temp, maskAll);
+      _cs149_veq_float(tempMask, sub, allZeros, maskAll);
+      // cout << _cs149_cntbits(tempMask) << endl;
+      // _sleep(1000);
+      if (_cs149_cntbits(tempMask) == VECTOR_WIDTH)
+      {
+        result += sum.value[0];
+        break;
+      }
+      _cs149_interleave_float(temp, sum);
+      sum = temp;
+    }
+    
   }
 
-  return 0.0;
+  return result;
 }
 
