@@ -148,12 +148,12 @@ bool verifyResult(float* values, int* exponents, float* output, float* gold, int
     } printf("\n");
 
     printf("output = ");
-    for (int i=0; i<N; i++) {
+    for (int i=0; i<N + VECTOR_WIDTH; i++) {
       printf("% f ", output[i]);
     } printf("\n");
 
     printf("gold   = ");
-    for (int i=0; i<N; i++) {
+    for (int i=0; i<N + VECTOR_WIDTH; i++) {
       printf("% f ", gold[i]);
     } printf("\n");
     return false;
@@ -236,7 +236,7 @@ void clampedExpSerial(float* values, int* exponents, float* output, int N) {
       }
       if (result > 9.999999f) {
         result = 9.999999f;
-      }
+      }//漏了这个
       output[i] = result;
     }
   }
@@ -253,13 +253,15 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
   //
   // 注意vset和vmove的区别是，vset的参数是一个数，即把这个数赋给向量的所有元素。而vmove则是把向量中的元素赋给目标向量。
   __cs149_vec_float x, maskIsOnes;
-  __cs149_vec_float result;
+  __cs149_vec_float result, clamped;
   __cs149_vec_int y, maskIsZero, allOnes;
-  __cs149_mask maskAll, maskForExp;
+  __cs149_mask maskAll, maskForExp, tempMask;
   maskAll = _cs149_init_ones();
   maskIsZero = _cs149_vset_int(0);
   maskIsOnes = _cs149_vset_float(1);
   allOnes = _cs149_vset_int(1);
+  clamped = _cs149_vset_float(9.999999f);
+  tempMask = _cs149_init_ones();
   for (int i = 0; i < N; i += VECTOR_WIDTH) {
     // 考虑到不能整除向量宽度的情况，需要进行判断，并利用_cs149_init_ones来修改遮罩
     // 这样可以避免超出临界区。
@@ -289,15 +291,23 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
     while (_cs149_cntbits(maskAll))
     {
       _cs149_vmult_float(result, result, x, maskAll);
+      // 检查是否越界
+      tempMask = _cs149_mask_and(tempMask, maskAll);
+      _cs149_vgt_float(tempMask, result, clamped, maskAll);
+      _cs149_vmove_float(result, clamped, tempMask);
+
       _cs149_vsub_int(y, y, allOnes, maskAll);
       _cs149_veq_int(maskForExp, y, maskIsZero, maskAll);
       maskForExp = _cs149_mask_not(maskForExp);
       maskAll = _cs149_mask_and(maskForExp, maskAll);
     }
+    maskAll = _cs149_init_ones();
+    if (i + VECTOR_WIDTH >= N)
+      maskAll = _cs149_init_ones(N - i);
+    _cs149_vstore_float(output + i, result, maskAll);
 
   }
-  maskAll = _cs149_init_ones();
-  _cs149_vstore_float(output, result, maskAll);
+
   return;
 }
 
