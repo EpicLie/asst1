@@ -5,6 +5,7 @@
 
 #include "CycleTimer.h"
 #include "sqrt_ispc.h"
+#include "AVX2_implement.h"
 
 using namespace ispc;
 
@@ -35,18 +36,18 @@ int main() {
         
         // starter code populates array with random input values
         // 0.001是防止rand()生成0导致整个数为0值，这样会导致牛顿法的效率低下。2.998是避免到3,同理。
-        // values[i] = .001f + 2.998f * static_cast<float>(rand()) / RAND_MAX;
+        values[i] = .001f + 2.998f * static_cast<float>(rand()) / RAND_MAX;
         // values[i] = .001f + 1.f * static_cast<float>(rand()) / RAND_MAX;
         // 为了实现相对于串行程序的speedup最高，这里必须充分利用simd的所有通道数，即必须无掩码。
         // 同时，2.998开方需要更多的时间，这样弥补了task版本的多线程开销。
         // (其实这个speedup也不是很稳定，有时候串行版本会抽风地算得很快)
-        values[i] = 2.998f;
+        // values[i] = 2.998f;
         // 那为了让speedup尽量低，那么就要利用simd的缺陷，即必须等待其他通道算完才能继续。
         // 可以尝试让一个通道的值为2.998，让其他通道都等待，这样速度就慢了。
-        if (i % 8 == 1)
-            values[i] = 2.998f;
-        else
-            values[i] = 1.0f;
+        // if (i % 8 == 1)
+        //     values[i] = 2.998f;
+        // else
+        //     values[i] = 1.0f;
     }
 
     // generate a gold version to check results
@@ -76,7 +77,8 @@ int main() {
     double minISPC = 1e30;
     for (int i = 0; i < 3; ++i) {
         double startTime = CycleTimer::currentSeconds();
-        sqrt_ispc(N, initialGuess, values, output);
+        // sqrt_ispc(N, initialGuess, values, output);
+        sqrt_implement_by_AVX2(N, initialGuess, values, output);
         double endTime = CycleTimer::currentSeconds();
         minISPC = std::min(minISPC, endTime - startTime);
     }
