@@ -1,0 +1,37 @@
+// {
+//     "background.editor": {
+//       "useFront": true,
+//       "style": {
+//         "background-position": "100% 100%",
+//         "background-size": "auto",
+//         "opacity": 0.6
+//       },
+//       // Local images can be dragged into the browser to quickly get the file protocol address from the address bar
+//       "images": ["file:///home/lh/R-C.jpeg"],
+//       "interval": 0,
+//       "random": false,
+//       // `sidebar` and `panel` have the same config as `fullscreen`
+//       "background.sidebar": {},
+//       "background.panel": {}
+//     }
+//   }
+
+{
+  "background.fullscreen": {
+    // Local images can be dragged into the browser to quickly get the file protocol address from the address bar
+    "images": ["file:///home/lh/R-C.jpeg"],
+    "opacity": 0.3,
+    "size": "cover",
+    "position": "center",
+    "interval": 0,
+    "random": false
+  },
+  // `sidebar` and `panel` have the same config as `fullscreen`
+  "background.sidebar": {},
+  "background.panel": {},
+  "files.associations": {
+    "cmath": "cpp",
+    "iostream": "cpp",
+    "ostream": "cpp"
+  }
+}
